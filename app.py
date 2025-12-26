@@ -34,12 +34,23 @@ st.set_page_config(page_title="Jarvis", page_icon="🤖")
 # Sleek CSS Injection
 st.markdown("""
     <style>
-    /* 1. HIDE DEFAULT STREAMLIT ELEMENTS */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    [data-testid="stHeader"] {background: rgba(0,0,0,0); height: 0px;} /* Removes the top gap */
+   
+            
+    /* 1. HIDE LOGO AND TOP BAR BACKGROUND, BUT KEEP BUTTONS */
+    header[data-testid="stHeader"] {
+        background: none !important;
+        background-color: rgba(0,0,0,0) !important;
+        color: black !important; /* Makes the arrow visible */
+    }
 
+    /* Hide the 'Made with Streamlit' footer */
+    footer {visibility: hidden;}
+
+    /* Specifically hide the 'Deploy' and 'Options' buttons but NOT the sidebar arrow */
+    [data-testid="stAppDeployButton"] {display: none;}
+    #MainMenu {visibility: hidden;}
+            
+            
     /* 2. HEADER STYLING */
     .title-text { 
         font-size: 32px !important; 
@@ -79,6 +90,13 @@ st.markdown("""
         border-radius: 30px;
         border: 1px solid #E0E0E0;
     }
+            /* Ensure the sidebar toggle is ALWAYS visible */
+[data-testid="stSidebarNav"] {
+    display: block !important;
+}
+[data-testid="stHeader"] {
+    background: rgba(0,0,0,0) !important;
+}
     
     /* 5. MOBILE FIXES */
     @media (max-width: 640px) {
