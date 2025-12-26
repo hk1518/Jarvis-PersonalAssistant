@@ -26,7 +26,71 @@ SCOPES = ['https://www.googleapis.com/auth/calendar']
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-st.set_page_config(page_title="Jarvis AI", page_icon="🤖", layout="wide")
+
+
+# Config must be the FIRST streamlit command
+st.set_page_config(page_title="Jarvis", page_icon="🤖")
+
+# Sleek CSS Injection
+st.markdown("""
+    <style>
+    /* 1. HIDE DEFAULT STREAMLIT ELEMENTS */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    [data-testid="stHeader"] {background: rgba(0,0,0,0); height: 0px;} /* Removes the top gap */
+
+    /* 2. HEADER STYLING */
+    .title-text { 
+        font-size: 32px !important; 
+        font-weight: 800; 
+        letter-spacing: -1px;
+        margin-bottom: 5px;
+        color: #f7f7f7;
+    }
+    .description-text { 
+        font-size: 15px; 
+        color: #f7e6e6; 
+        margin-top: 5px;
+        margin-bottom: 5px; 
+    }
+
+    /* 3. CHAT BUBBLE REFINEMENT */
+    /* General message container */
+    [data-testid="stChatMessage"] {
+        padding: 1rem 1.5rem;
+        border-radius: 20px;
+        margin-bottom: 15px;
+        border: none;
+    }
+/* 3. RESET CHAT BUBBLES TO DEFAULT */
+    /* This ensures no custom margins or colors interfere with native Streamlit bubbles */
+    [data-testid="stChatMessage"] {
+        background-color: transparent !important;
+        border: none !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding: 0.5rem 0rem !important;
+    }
+
+    /* 4. CHAT INPUT STYLING */
+    /* Makes the input bar look like it's floating */
+    [data-testid="stChatInput"] {
+        border-radius: 30px;
+        border: 1px solid #E0E0E0;
+    }
+    
+    /* 5. MOBILE FIXES */
+    @media (max-width: 640px) {
+        .title-text { font-size: 26px !important; }
+        [data-testid="stChatMessage"] { margin-left: 0% !important; margin-right: 0% !important; }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.markdown('<p class="title-text"> Hey there! I am Jarvis </p>', unsafe_allow_html=True)
+st.markdown('<p class="description-text">Ask me anything about HK schedule and events.</p>', unsafe_allow_html=True)
+st.divider()
 
 # --- 2. THE TOOLS ---
 
@@ -174,6 +238,7 @@ CALENDAR_RULES = (
     "* **Check Context First:** Always look at the CONTEXT block below for events before using tools.\n"
     "* **Deletion:** To delete, you MUST use the exact ID provided in the CONTEXT.\n"
     "* **Errors:** If a tool returns an error, report it exactly.\n\n"
+
 )
 
 def get_system_instructions():
@@ -185,6 +250,11 @@ def get_system_instructions():
 * TODAY'S DATE: {now_ist.strftime('%Y-%m-%d')}
 
 {CALENDAR_RULES}
+
+When the user asks about their schedule or events, ALWAYS follow this format, and list them as Bullet points. 
+
+ [Date], [Day] - [Time] [Event Title]
+
 
 ## CURRENT DATA
 * CONTEXT:
@@ -227,7 +297,7 @@ with st.sidebar:
             st.rerun()
 
 # --- Main UI Logic ---
-st.title("Hey there! I'm Jarvis, HK's PA")
+
 
 for msg in st.session_state.chat_history:
     with st.chat_message(msg["role"]): st.markdown(msg["content"])
