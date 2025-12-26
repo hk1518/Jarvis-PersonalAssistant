@@ -1,0 +1,7 @@
+streamlit
+google-auth-oauthlib
+google-api-python-client
+google-auth-httplib2
+supabase
+duckduckgo-search
+google-generativeai
