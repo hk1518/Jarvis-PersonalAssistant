@@ -11,6 +11,10 @@ from supabase import create_client
 import time
 from duckduckgo_search import DDGS
 
+for m in genai.list_models():
+    if 'generateContent' in m.supported_generation_methods:
+        print(f"Model Name: {m.name}")
+     
 # --- 0. CRITICAL INITIALIZATION ---
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
@@ -25,7 +29,6 @@ if "is_admin" not in st.session_state:
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
-
 
 
 # Config must be the FIRST streamlit command
@@ -109,6 +112,7 @@ st.markdown("""
 st.markdown('<p class="title-text"> Hey there! I am Jarvis </p>', unsafe_allow_html=True)
 st.markdown('<p class="description-text">Ask me anything about HK schedule and events.</p>', unsafe_allow_html=True)
 st.divider()
+
 
 # --- 2. THE TOOLS ---
 
@@ -316,19 +320,57 @@ with st.sidebar:
 
 # --- Main UI Logic ---
 
+def trim_history(history, max_messages=10):
+    """Keep only the last X messages in history to save tokens."""
+    if len(history) > max_messages:
+        # Keep the system instruction if it's the first message, 
+        # otherwise just slice the last X.
+        return history[-max_messages:]
+    return history
+
+ 
 
 for msg in st.session_state.chat_history:
     with st.chat_message(msg["role"]): st.markdown(msg["content"])
 
 if prompt := st.chat_input("How can I help you?"):
     refresh_jarvis_session() 
-    st.session_state.chat_history.append({"role": "user", "content": prompt})
-    with st.chat_message("user"): st.markdown(prompt)
     
+    # --- STEP 1: TRIM HISTORY (The Brain Maintenance) ---
+    # We keep the last 10 messages (5 exchanges) to stay within the Free Tier limits.
+    if len(st.session_state.chat_session.history) > 10:
+        st.session_state.chat_session.history = st.session_state.chat_session.history[-10:]
+    
+    # Save user message to UI state
+    st.session_state.chat_history.append({"role": "user", "content": prompt})
+    with st.chat_message("user"): 
+        st.markdown(prompt)
+
+    # --- STEP 2: PROTECTED API CALL ---
     with st.chat_message("assistant"):
-        response = st.session_state.chat_session.send_message(prompt)
-        st.markdown(response.text)
-        st.session_state.chat_history.append({"role": "assistant", "content": response.text})
+        try:
+            # Send message and get the response
+            response = st.session_state.chat_session.send_message(prompt)
+            full_response = response.text
+            
+            # Display and save
+            st.markdown(full_response)
+            st.session_state.chat_history.append({"role": "assistant", "content": full_response})
+
+            # --- STEP 3: FUNCTION CALLS & SYNC ---
+            if any(part.function_call for part in response.candidates[0].content.parts):
+                with st.spinner("Syncing..."):
+                    time.sleep(2) 
+                    sync_calendar()          
+                    refresh_jarvis_session() 
+                st.toast("Synchronized", icon="🔄")
+
+        except Exception as e:
+            # Catch the specific Quota error
+            if "429" in str(e) or "ResourceExhausted" in str(e):
+                st.error("⏳ Quota reached. Gemini is taking a breather. Please wait 1 minute.")
+            else:
+                st.error(f"⚠️ An unexpected error occurred: {e}")
 
     if any(part.function_call for part in response.candidates[0].content.parts):
         with st.spinner("Syncing..."):
@@ -336,3 +378,5 @@ if prompt := st.chat_input("How can I help you?"):
             sync_calendar()          
             refresh_jarvis_session() 
         st.toast("Synchronized", icon="🔄")
+
+  
